@@ -38,14 +38,134 @@ While I have previously published on this dataset, it was a small subset of the 
 
 ## Data collection procedures
 Please see the attached file for total data collection procedures. 
+## Load packages
+```{r}
+library(psych)
+library(ggplot2)
+library(reshape2)
+library(nlme)
+library(plyr)
+library(emmeans)
+library(car)
+```
 
 ## Load data
 ```{r}
-
+baseline<-read.table("~/Google Drive/PEAS/SSIB2020/data/BASE_PREG_copy.csv", sep=",", header=T)
+post<-read.table("~/Google Drive/PEAS/SSIB2020/data/moma_post.CSV", sep=",", header=T)
+post_scores<-read.table("~/Google Drive/PEAS/SSIB2020/data/SCORES_POST.CSV", sep=",", header=T)
+preg_scores<-read.table("~/Google Drive/PEAS/SSIB2020/data/SCORES_PREG.CSV", sep=",", header=T)
+preg_demos<-read.table("~/Google Drive/PEAS/SSIB2020/data/MOMA_Preg copy.csv", sep=",", header=T)
+preg_ses<-read.table("~/Google Drive/PEAS/SSIB2020/data/SES_PREG.csv", sep=",", header=T)
+bloodv2<-read.table("~/Google Drive/PEAS/SSIB2020/data/blood_v2.csv", sep=",", header=T)
+bloodv5<-read.table("~/Google Drive/PEAS/SSIB2020/data/blood_v5.csv", sep=",", header=T)
+diet<-read.table("~/Google Drive/PEAS/SSIB2020/data/HEI2015SCORE_POST.csv", sep=",", header=T)
+names(post)
 ```
 
+## Variables of interest
+```{r}
+base_vars<-c("PATID", "BMI", "AGE_Y", "PARITY", "DEM_ETHNICITY", "DEM_RACE")
+post_svar<-c("PATID", "VISNO", "frh_bkpnt","frh_omax","frh_pmax", "frl_bkpnt","frl_omax","frl_pmax","frh_intensity","frl_intensity","FRH_ELASTICITY_KOFF")
+preg_svar<-c("PATID", "VISNO", "FRH_BKPNT","FRH_OMAX", "FRH_PMAX","FRH_PMAX_PRICE","FRH_PCTCOMP","FRL_BKPNT","FRL_OMAX","FRL_PMAX","FRL_PMAX_PRICE", "FRL_PCTCOMP" )
+demos<-c("PATID","VISNO","MomA_BMI")
+ses<-c("PATID","VISNO","DEM_SNAP")
+diet_vars<-c("PATID","KCAL", "sfat_kcal_post","sfat_pct_post","HEI2015C12_SFAT", "addsug_kcal_post","addsug_pct_post", "HEI2015C13_ADDSUG","sfat_as_kcal_post", "sfat_as_pct_post")
+post_vars<-c("PATID", "VISNO", "MomA_BMICH")
+```
 
-## For this analysis women will be excluded if:
+## Collect varaibles of interest
+```{r}
+base_df<-baseline[base_vars]
+colnames(base_df)<-c("PATID","BMI_0","AGE_Y","PARITY","DEM_ETHNICITY", "DEM_RACE")
+
+post_df<-post_scores[post_svar]
+post_df<-subset(post_df, post_df$VISNO == 2)
+summary(post_df)
+colnames(post_df)<-c("PATID", "postVISNO", "FRH_BKPNT_2","FRH_OMAX_2","FRH_PMAX_2", "FRL_BKPNT_2","FRL_OMAX_2","FRL_PMAX_2","frh_intensity","frl_intensity","FRH_ELASTICITY_KOFF")
+
+preg_df<-preg_scores[preg_svar]
+preg_df<-subset(preg_df, preg_df$VISNO == 1)
+summary(preg_df)
+colnames(preg_df)<-c("PATID", "pregVISNO", "FRH_BKPNT_1","FRH_OMAX_1", "FRH_PMAX_1","FRH_PMAX_PRICE_1","FRH_PCTCOMP_1","FRL_BKPNT_1","FRL_OMAX_1","FRL_PMAX_1","FRL_PMAX_PRICE_1", "FRL_PCTCOMP_1" )
+
+demo_df<-preg_demos[demos]
+demo_df<-subset(demo_df, demo_df$VISNO == 1)
+colnames(demo_df)<-c("PATID","VISNO_1","MomA_BMI")
+ses_df<-preg_ses[ses]
+ses_df<-subset(ses_df, ses_df$VISNO == 1)
+names(ses_df)
+
+diet_df<-diet[diet_vars]
+
+demopost_df<-post[post_vars]
+head(demopost_df)
+demopost_df<-subset(demopost_df, demopost_df$VISNO == 2)
+colnames(demopost_df)<-c("PATID", "VISNO_2", "MomA_BMICH")
+
+summary(demopost_df)
+colnames(bloodv2)<-c("PATID","CReactiveProtein_1", "CPeptide_1", "Glucose_1","Insulin_1", "Progesterone_1", "Estradiol_1")
+colnames(bloodv5)<-c("PATID","CReactiveProtein_2", "CPeptide_2", "Glucose_2","Insulin_2", "Progesterone_2", "Estradiol_2")
+```
+
+## Combing datasets into final df
+```{r}
+blood_df<-join(bloodv2,bloodv5)
+scores_df<-join(preg_df,post_df)
+demopp_df<-join(demo_df,demopost_df)
+summary(demopp_df)
+demoses_df<-join(ses_df,demopp_df)
+cov_df<-join(demoses_df, base_df)
+
+int_df<-join(blood_df, scores_df)
+dint_df<-join(int_df, diet_df)
+df<-join(dint_df, cov_df)
+vars<-c("PATID", "Estradiol_1","Estradiol_2","FRH_BKPNT_1","FRH_OMAX_1", "FRH_PMAX_1","FRL_BKPNT_1","FRL_OMAX_1","FRL_PMAX_1", "FRH_BKPNT_2","FRH_OMAX_2","FRH_PMAX_2", "FRL_BKPNT_2","FRL_OMAX_2","FRL_PMAX_2", "KCAL", "sfat_kcal_post","sfat_pct_post","HEI2015C12_SFAT","addsug_kcal_post","addsug_pct_post","HEI2015C13_ADDSUG","sfat_as_kcal_post","sfat_as_pct_post","DEM_SNAP","MomA_BMI","BMI_0","AGE_Y","PARITY","DEM_ETHNICITY", "DEM_RACE","MomA_BMICH" )
+wide_df<-df[vars]
+```
+
+## Wide to long
+```{r}
+summary(wide_df)
+long_df<-reshape(wide_df, varying=list( Estradiol=c(2,3), FRH_BKPNT=c(4,10), FRH_OMAX=c(5,11), FRH_PMAX=c(6,12), FRL_BKPNT=c(7,13), FRL_OMAX=c(8, 14), FRL_PMAX=c(9, 15)),  v.names=c("Estrodiol",  "high_breakpoint", "high_OMAX","high_PMAX","low_breakpoint","low_OMAX","low_PMAX"), 
+          # that was needed after changed 'varying' arg to a list to allow 'times' 
+        direction="long",  
+        times=1:2,        # substitutes number for T1 and T2
+        timevar="Time")  # to name the time col
+#write.table(long_df, "~/Google Drive/PEAS/SSIB2020/data/long_data.csv", sep=",", row.names = F)
+```
+
+## Set factors
+```{r}
+names(long_df)
+long_df$PATID<-as.factor(long_df$PATID)
+long_df$DEM_ETHNICITY<-as.factor(long_df$DEM_ETHNICITY)
+long_df$DEM_RACE<-as.factor(long_df$DEM_RACE)
+long_df$DEM_SNAP<-as.factor(long_df$DEM_SNAP)
+long_df$PARITY<-as.factor(long_df$PARITY)
+long_df$Estrodiol<-as.numeric(long_df$Estrodiol)
+describe(long_df)
+```
+```{r}
+hist(long_df$Estrodiol)
+hist(sqrt(long_df$MomA_BMICH)) # square is a lot better
+long_df$sqrtBMICH<-sqrt(7.5-long_df$MomA_BMICH)
+hist(long_df$sqrtBMICH) # square is a lot better
+describe(long_df$MomA_BMICH)
+hist(long_df$AGE_Y)
+hist(long_df$HEI2015C12_SFAT)
+hist(sqrt(long_df$addsug_pct_post)) #this is good
+long_df$sqrtPerAddSug<-sqrt(long_df$addsug_pct_post)
+hist(subset(long_df$low_breakpoint, long_df$low_breakpoint < 5179.98/2))
+hist(long_df$high_breakpoint)
+hist(long_df$high_OMAX)
+hist(long_df$low_OMAX)
+hist(long_df$low_PMAX)
+hist(long_df$high_PMAX)
+# reinforcement is real,real skewed will need to check each model 
+```
+
+## For this analysis women will be excluded if: <- need to ask for these 
 They have less than 2 recalls in the pre and postpartum period.
 They underwent sterilization in the postpartum period.
 They reported postpartum depression.
@@ -53,25 +173,59 @@ They reported taking psychiatric medications or medications related to steroid h
 
 ## Sample size
 450 in the overall sample
+360 with measures needed
+199 with frl_bkpnt 
 
 ## Measured variables
-Experimental
+### Experimental
 Estradiol at 16-22 week pregnancy and 6 months postpartum 
 Dietary sugar intake at baseline, 16-22 week pregnancy, and 6 months postpartum
 Reinforcement measures (breakpoint and omax) change from baseline, 16-22 week pregnancy, and 6 months postpartum 
-Covariates
-Race/ethnicity 
-SES
-Parity 
-BMI (change from baseline at 16-22wks pregnancy and 6mo postpartum)
-Age
-
+FRH_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, BREAKPOINT <- use
+FRH_OMAX	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, O-MAX
+FRH_PCTCOMP	8	Food Reinforcement (Epstein) High Palatable, Percent Entered Fields
+FRH_PMAX	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, P-MAX PRODUCT
+FRH_PMAX_PRICE	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, P-MAX PRICE
+FRL_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, BREAKPOINT <- use
+FRL_OMAX	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, O-MAX
+FRL_PCTCOMP	8	Food Reinforcement (Epstein) Low Palatable, Percent Entered Fields
+FRL_PMAX	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, P-MAX PRODUCT
+FRL_PMAX_PRICE	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, P-MAX PRICE
+### Covariates
+#### Race/ethnicity
+DEM_RACE
+#### SES
+DEM_SNAP
+#### Parity 
+PARITY
+#### BMI (change from baseline at 16-22wks pregnancy and 6mo postpartum)
+BMI
+MomA_BMI
+MomA_BMICH
+#### Age
+AGE_Y
 # Analysis Plan
 ## Statistical models
+```{r}
+names(long_df)
+m0<-lme(high_breakpoint~1, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
+summary(m0)
+
+m1<-lme(high_breakpoint~sqrtBMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
+summary(m1)
+vif(m1)
+plot(m1)
+qqnorm(log(resid(m1))) # doesn't look great 
+hist(log(resid(m1))) # log seems to do the trick 
+library(MASS)
+bc <- boxcox(long_df$high_breakpoint~long_df$sqrtBMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
+```
 
 We will use a general linear model to assess the interaction of added sugar intake and estradiol concentrations on reinforcement. We run a series of models to assess the effect of the independent variables of interest:
 1) baseline model (intercept only with covariates)
+
 2) interaction model (interaction term with covariates)
+
 We will assess differences between the two models using an anova. 
 Estradiol and added sugar intake will be random intercepts.
 All analysis will take place in R. p > 0.05. Bonferroni corrections 
