@@ -1,0 +1,78 @@
+---
+title: "PEAS_E_reinforcment"
+author: "Grace Shearrer"
+date: "3/11/2020"
+output: html_document
+---
+# Title
+Effect of estrogen and dietary sugar intake on food reinforcement in pre and postpartum women
+
+# Description
+This is a secondary data analysis examining the relationship between dietary sugar intake, estrogen, and food reinforcement between pregnancy and the postpartum period. Estrogen has been related to a decrease in motivation for a sugar reward in animal models. Further estrogen has been shown to increase prediction errors in the nucleus accumbens. Together this suggests that estrogen is related to dopaminergic signaling and behaviorally this manifests as a reduction in the rewarding aspects of sugar. However, in the addiction literature, estrogen has been shown to increase motivation for illicit substances and alcohol. The differences between sugar and other rewards is not fully understood. During pregnancy, estrogen levels increases exponentially. This provides an interesting model to test the effect of estrogen on food reward and the effect of sugar intake. 
+
+# Hypotheses
+Aim1. To test the interactive effects of estrogen and added sugar intake on motivation for a reward, we will assess serum estrogen, percent added sugar intake from 2 diet recalls, and motivation (food reinforcement scale) from the PEAS dataset both in the pregnancy and postpartum period. We expect a significant interaction between added sugar intake and estrogen. Specifically we expect high dietary sugar intake will ablate the reward diminishing effect of estrogen during pregnancy (these women will show high pregnancy reward values, compared to low sugar intake). 
+
+# Design Plan
+## Study type
+Observational Study - Data is collected from study subjects that are not randomly assigned to a treatment. This includes surveys, “natural experiments,” and regression discontinuity designs.
+
+## Blinding
+No blinding is involved in this study.
+Is there any additional blinding in this study?
+No response
+
+## Study design
+This study was completed in 2016. It was a longitudinal observational study of women in and around the Chapel Hill area from 12 wks pregnancy through 1yr postpartum. Details have been published here.
+Pregnancy eating attributes study (PEAS): a cohort study examining behavioral and environmental influences on diet and weight change in pregnancy and postpartum.
+Nansel TR, Lipsky LM, Siega-Riz AM, Burger K, Faith M, Liu A
+BMC Nutr. 2016 Jul 15; 2
+
+
+## Sampling Plan
+Existing Data
+Registration prior to analysis of the data
+
+## Explanation of existing data
+While I have previously published on this dataset, it was a small subset of the total dataset. I have not looked at any summary statistics for the whole dataset outside of completion rates as the data was collected. 
+
+## Data collection procedures
+Please see the attached file for total data collection procedures. 
+
+## Load data
+```{r}
+
+```
+
+
+## For this analysis women will be excluded if:
+They have less than 2 recalls in the pre and postpartum period.
+They underwent sterilization in the postpartum period.
+They reported postpartum depression.
+They reported taking psychiatric medications or medications related to steroid hormones or related to body mass
+
+## Sample size
+450 in the overall sample
+
+## Measured variables
+Experimental
+Estradiol at 16-22 week pregnancy and 6 months postpartum 
+Dietary sugar intake at baseline, 16-22 week pregnancy, and 6 months postpartum
+Reinforcement measures (breakpoint and omax) change from baseline, 16-22 week pregnancy, and 6 months postpartum 
+Covariates
+Race/ethnicity 
+SES
+Parity 
+BMI (change from baseline at 16-22wks pregnancy and 6mo postpartum)
+Age
+
+# Analysis Plan
+## Statistical models
+
+We will use a general linear model to assess the interaction of added sugar intake and estradiol concentrations on reinforcement. We run a series of models to assess the effect of the independent variables of interest:
+1) baseline model (intercept only with covariates)
+2) interaction model (interaction term with covariates)
+We will assess differences between the two models using an anova. 
+Estradiol and added sugar intake will be random intercepts.
+All analysis will take place in R. p > 0.05. Bonferroni corrections 
+
