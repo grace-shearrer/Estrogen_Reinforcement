@@ -47,19 +47,20 @@ library(nlme)
 library(plyr)
 library(emmeans)
 library(car)
+library(MASS)
 ```
 
 ## Load data
 ```{r}
-baseline<-read.table("~/Google Drive/PEAS/SSIB2020/data/BASE_PREG_copy.csv", sep=",", header=T)
-post<-read.table("~/Google Drive/PEAS/SSIB2020/data/moma_post.CSV", sep=",", header=T)
-post_scores<-read.table("~/Google Drive/PEAS/SSIB2020/data/SCORES_POST.CSV", sep=",", header=T)
-preg_scores<-read.table("~/Google Drive/PEAS/SSIB2020/data/SCORES_PREG.CSV", sep=",", header=T)
-preg_demos<-read.table("~/Google Drive/PEAS/SSIB2020/data/MOMA_Preg copy.csv", sep=",", header=T)
-preg_ses<-read.table("~/Google Drive/PEAS/SSIB2020/data/SES_PREG.csv", sep=",", header=T)
-bloodv2<-read.table("~/Google Drive/PEAS/SSIB2020/data/blood_v2.csv", sep=",", header=T)
-bloodv5<-read.table("~/Google Drive/PEAS/SSIB2020/data/blood_v5.csv", sep=",", header=T)
-diet<-read.table("~/Google Drive/PEAS/SSIB2020/data/HEI2015SCORE_POST.csv", sep=",", header=T)
+baseline<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/BASE_PREG_copy.csv", sep=",", header=T)
+post<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/moma_post.CSV", sep=",", header=T)
+post_scores<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/SCORES_POST.CSV", sep=",", header=T)
+preg_scores<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/SCORES_PREG.CSV", sep=",", header=T)
+preg_demos<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/MOMA_Preg copy.csv", sep=",", header=T)
+preg_ses<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/SES_PREG.csv", sep=",", header=T)
+bloodv2<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/blood_v2.csv", sep=",", header=T)
+bloodv5<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/blood_v5.csv", sep=",", header=T)
+diet<-read.table("~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/HEI2015SCORE_POST.csv", sep=",", header=T)
 names(post)
 ```
 
@@ -132,7 +133,7 @@ long_df<-reshape(wide_df, varying=list( Estradiol=c(2,3), FRH_BKPNT=c(4,10), FRH
         direction="long",  
         times=1:2,        # substitutes number for T1 and T2
         timevar="Time")  # to name the time col
-#write.table(long_df, "~/Google Drive/PEAS/SSIB2020/data/long_data.csv", sep=",", row.names = F)
+# write.table(long_df, "~/Google Drive/Projects/13-3848_PEAS/SSIB2020/data/long_data.csv", sep=",", row.names = F)
 ```
 
 ## Set factors
@@ -146,6 +147,7 @@ long_df$PARITY<-as.factor(long_df$PARITY)
 long_df$Estrodiol<-as.numeric(long_df$Estrodiol)
 describe(long_df)
 ```
+
 ```{r}
 hist(long_df$Estrodiol)
 hist(sqrt(long_df$MomA_BMICH)) # square is a lot better
@@ -217,7 +219,7 @@ vif(m1)
 plot(m1)
 qqnorm(log(resid(m1))) # doesn't look great 
 hist(log(resid(m1))) # log seems to do the trick 
-library(MASS)
+
 bc <- boxcox(long_df$high_breakpoint~long_df$sqrtBMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
 ```
 
