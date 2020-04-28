@@ -134,81 +134,13 @@ df<-join(dint_df, cov_df)
 vars<-c("PATID", "Estradiol_1","Estradiol_2","FRH_BKPNT_1","FRH_OMAX_1", "FRH_PMAX_1","FRL_BKPNT_1","FRL_OMAX_1","FRL_PMAX_1", "FRH_BKPNT_2","FRH_OMAX_2","FRH_PMAX_2", "FRL_BKPNT_2","FRL_OMAX_2","FRL_PMAX_2", "KCAL", "sfat_kcal_post","sfat_pct_post","HEI2015C12_SFAT","addsug_kcal_post","addsug_pct_post","HEI2015C13_ADDSUG","sfat_as_kcal_post","sfat_as_pct_post","DEM_SNAP","MomA_BMI","BMI_0","AGE_Y","PARITY","DEM_ETHNICITY", "DEM_RACE","MomA_BMICH" )
 wide_df<-df[vars]
 ```
-## Make change scores
-```{r}
-# wide_df$E_change<-as.numeric(wide_df$Estradiol_2) - as.numeric(wide_df$Estradiol_1)
-wide_df$Estradiol_2<-as.numeric(wide_df$Estradiol_2)
-wide_df$Estradiol_1<-as.numeric(wide_df$Estradiol_1)
-
-hist(as.numeric(wide_df$Estradiol_2))
-hist(as.numeric(wide_df$Estradiol_1))
-
-wide_df$FRH_BKPNT_2<-as.numeric(wide_df$FRH_BKPNT_2)
-hist(wide_df$FRH_BKPNT_2)
-quantile(wide_df$low_bp_change, na.rm = T)
-
-wide_df$FRH_BKPNT_1<-as.numeric(wide_df$FRH_BKPNT_1)
-hist(wide_df$FRH_BKPNT_1)
-quantile(wide_df$low_bp_change, na.rm = T)
-
-wide_df$FRL_BKPNT_2<-as.numeric(wide_df$FRL_BKPNT_2)
-hist(wide_df$FRL_BKPNT_1)
-quantile(wide_df$low_bp_change, na.rm = T)
-
-wide_df$FRL_BKPNT_1<-as.numeric(wide_df$FRL_BKPNT_1)
-hist(wide_df$FRL_BKPNT_2)
-quantile(wide_df$low_bp_change, na.rm = T)
-
-wide_df$high_bp_change<-as.numeric(wide_df$FRH_BKPNT_2) - as.numeric(wide_df$FRH_BKPNT_1)
-wide_df$low_bp_change<-as.numeric(wide_df$FRL_BKPNT_2) - as.numeric(wide_df$FRL_BKPNT_1)
-hist(wide_df$low_bp_change)
-quantile(wide_df$low_bp_change, na.rm = T)
-
-wide_df$low_change[wide_df$low_bp_change<= -200]<-"1"
-wide_df$low_change[wide_df$low_bp_change> -200 & wide_df$low_bp_change<= -50]<-"2"
-wide_df$low_change[wide_df$low_bp_change> -50 & wide_df$low_bp_change<= 100]<-"3"
-wide_df$low_change[wide_df$low_bp_change> 100]<-"4"
-
-
-hist(wide_df$high_bp_change)
-quantile(wide_df$high_bp_change, na.rm = T)
-
-wide_df$high_change[wide_df$high_bp_change<= -200]<-"1"
-wide_df$high_change[wide_df$high_bp_change> -200 & wide_df$high_bp_change<= -100]<-"2"
-wide_df$high_change[wide_df$high_bp_change> -100 & wide_df$high_bp_change<= 100]<-"3"
-wide_df$high_change[wide_df$high_bp_change> 100]<-"4"
-
-summary(as.factor(wide_df$low_change))
-wide_df<-na.omit(wide_df)
-```
-
-```{r}
-names(wide_df)
-m0<-lm(high_change~1, data = wide_df)
-summary(m0)
-
-m1<-lm(high_change~MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = wide_df)
-summary(m1)
-lrtest(m0,m1) #no covariates predict the change very much
-
-m2<-lm(high_change~E_change+MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = wide_df)
-lrtest(m0,m2)
-summary(m2)
-```
-
-```{r}
-ggplot(subset(wide_df, wide_df$low_bp_change < 1000 & wide_df$low_bp_change > -1000), aes(x=E_change, y=HEI2015C13_ADDSUG)) +
-    geom_point(shape=1) +    # Use hollow circles
-    geom_smooth(method=lm)   # Add linear regression line 
-                             #  (by default includes 95% confidence region)
-
-```
-
-
 
 ## Wide to long
 ```{r}
 summary(wide_df)
+wide_df$Estradiol_1<-as.numeric(wide_df$Estradiol_1)
+wide_df$Estradiol_2<-as.numeric(wide_df$Estradiol_2)
+
 long_df<-reshape(wide_df, varying=list( Estradiol=c(2,3), FRH_BKPNT=c(4,10), FRH_OMAX=c(5,11), FRH_PMAX=c(6,12), FRL_BKPNT=c(7,13), FRL_OMAX=c(8, 14), FRL_PMAX=c(9, 15)),  v.names=c("Estrodiol",  "high_breakpoint", "high_OMAX","high_PMAX","low_breakpoint","low_OMAX","low_PMAX"), 
           # that was needed after changed 'varying' arg to a list to allow 'times' 
         direction="long",  
@@ -226,25 +158,20 @@ long_df$DEM_RACE<-as.factor(long_df$DEM_RACE)
 long_df$DEM_SNAP<-as.factor(long_df$DEM_SNAP)
 long_df$PARITY<-as.factor(long_df$PARITY)
 long_df$Estrodiol<-as.numeric(long_df$Estrodiol)
-describe(long_df)
+describeBy(long_df$Estrodiol, long_df$Time)
 ```
 
 ```{r}
 hist(long_df$Estrodiol)
-hist(sqrt(long_df$MomA_BMICH)) # square is a lot better
+hist(long_df$MomA_BMICH) # square is a lot better
 long_df$sqrtBMICH<-sqrt(7.5-long_df$MomA_BMICH)
 hist(long_df$sqrtBMICH) # square is a lot better
 describe(long_df$MomA_BMICH)
 hist(long_df$AGE_Y)
-hist(long_df$HEI2015C12_SFAT)
 hist(sqrt(long_df$addsug_pct_post)) #this is good
 long_df$sqrtPerAddSug<-sqrt(long_df$addsug_pct_post)
-hist(subset(long_df$low_breakpoint, long_df$low_breakpoint < 5179.98/2))
-hist(subset(long_df$high_breakpoint, long_df$high_breakpoint < 111000/20))
-hist(long_df$high_OMAX)
-hist(long_df$low_OMAX)
-hist(long_df$low_PMAX)
-hist(long_df$high_PMAX)
+hist(long_df$low_breakpoint)
+hist(long_df$high_breakpoint)
 # reinforcement is real,real skewed will need to check each model 
 ```
 
@@ -265,15 +192,9 @@ Estradiol at 16-22 week pregnancy and 6 months postpartum
 Dietary sugar intake at baseline, 16-22 week pregnancy, and 6 months postpartum
 Reinforcement measures (breakpoint and omax) change from baseline, 16-22 week pregnancy, and 6 months postpartum 
 ### FRH_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, BREAKPOINT <- use
-FRH_OMAX	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, O-MAX
-FRH_PCTCOMP	8	Food Reinforcement (Epstein) High Palatable, Percent Entered Fields
-FRH_PMAX	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, P-MAX PRODUCT
-FRH_PMAX_PRICE	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, P-MAX PRICE
+Will need to create groups due to extreme skew
 ### FRL_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, BREAKPOINT <- use
-FRL_OMAX	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, O-MAX
-FRL_PCTCOMP	8	Food Reinforcement (Epstein) Low Palatable, Percent Entered Fields
-FRL_PMAX	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, P-MAX PRODUCT
-FRL_PMAX_PRICE	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, P-MAX PRICE
+Will need to create groups due to extreme skew
 ### Covariates
 #### Race/ethnicity
 DEM_RACE
@@ -282,73 +203,21 @@ DEM_SNAP
 #### Parity 
 PARITY
 #### BMI (change from baseline at 16-22wks pregnancy and 6mo postpartum)
-BMI
-MomA_BMI
 MomA_BMICH
 #### Age
 AGE_Y
 # Analysis Plan
-We will use a general linear model to assess the interaction of added sugar intake and estradiol concentrations on reinforcement. We run a series of models to assess the effect of the independent variables of interest:
+We will use a oridnal logistic regression to assess the interaction of added sugar intake and estradiol concentrations on reinforcement. We run a series of models to assess the effect of the independent variables of interest:
 1) baseline model (intercept only with covariates)
 
 ## Statistical models - Baseline model
 ```{r}
-names(long_df)
-m0<-lme(high_breakpoint~1, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
-summary(m0)
-
-m1<-lme(high_breakpoint~MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
-summary(m1)
-vif(m1)
-plot(m1)
-qqnorm(log(resid(m1))) # doesn't look great 
-hist(log(resid(m1))) # log seems to do the trick 
-
-bc <- boxcox(long_df$high_breakpoint~long_df$MomA_BMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
-bc
-```
-### box cox transform test
-```{r}
-(lambda <- bc$x[which.max(bc$y)])
-
-
-powerTransform <- function(y, lambda1, lambda2 = NULL, method = "boxcox") {
-
-  boxcoxTrans <- function(x, lam1, lam2 = NULL) {
-
-    # if we set lambda2 to zero, it becomes the one parameter transformation
-    lam2 <- ifelse(is.null(lam2), 0, lam2)
-
-    if (lam1 == 0L) {
-      log(y + lam2)
-    } else {
-      (((y + lam2)^lam1) - 1) / lam1
-    }
-  }
-
-  switch(method
-         , boxcox = boxcoxTrans(y, lambda1, lambda2)
-         , tukey = y^lambda1
-  )
-}
-
-
-# re-run with transformation
-m2 <- lm(powerTransform(long_df$high_breakpoint, lambda) ~ long_df$MomA_BMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
-
-# QQ-plot
-qqnorm(m1$residuals); qqline(m1$residuals)
-qqnorm(m2$residuals); qqline(m2$residuals)
-```
-
-### Too skewed need to try binning
-```{r}
 quantile(long_df$low_breakpoint, na.rm = T)
 
-long_df$low_bp[long_df$low_breakpoint<200]<-"1"
-long_df$low_bp[long_df$low_breakpoint>=200 & long_df$low_breakpoint<300]<-"2"
-long_df$low_bp[long_df$low_breakpoint>=300 & long_df$low_breakpoint<500]<-"3"
-long_df$low_bp[long_df$low_breakpoint>=500]<-"4"
+long_df$low_bp[long_df$low_breakpoint<=200]<-"1"
+long_df$low_bp[long_df$low_breakpoint>200 & long_df$low_breakpoint<=300]<-"2"
+long_df$low_bp[long_df$low_breakpoint>300 & long_df$low_breakpoint<=500]<-"3"
+long_df$low_bp[long_df$low_breakpoint>500]<-"4"
 
 quantile(long_df$high_breakpoint, na.rm = T)
 
@@ -356,62 +225,130 @@ long_df$high_bp[long_df$high_breakpoint<200]<-"1"
 long_df$high_bp[long_df$high_breakpoint>=200 & long_df$high_breakpoint<300]<-"2"
 long_df$high_bp[long_df$high_breakpoint>=300 & long_df$high_breakpoint<500]<-"3"
 long_df$high_bp[long_df$high_breakpoint>=500]<-"4"
+long_df$high_bp<-as.factor(long_df$high_bp)
+long_df$low_bp<-as.factor(long_df$low_bp)
 
+summary(as.factor(long_df$high_bp))
+summary(as.factor(long_df$low_bp))
+long_df$Time<-as.factor(long_df$Time)
+
+long_df<-na.omit(long_df)
 ```
 
-# Ordinal regression
-Can't do normal regression with a factor as the outcome. Can't do binary logistic regression with more than two outcome variables. Need to use ordinal logistic regression.  https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/
+# Summaries
 ```{r}
-ggplot(long_df, aes(x = high_bp, y = Estrodiol)) +
+ggplot(long_df, aes(x = high_bp, y = Estrodiol, color = Time)) +
   geom_boxplot(size = .75) +
   geom_jitter(alpha = .5) +
-  facet_grid(Time ~ ., margins = TRUE) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-```
-```{r}
-ggplot(subset(long_df, long_df$high_breakpoint < 1000), aes(x = high_breakpoint, y = Estrodiol)) +
-  geom_jitter(alpha = .5) +
-  geom_smooth(method='lm') +
-  facet_grid(Time ~ high_bp, margins = TRUE) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  ggtitle("Estrogen vs. high palatability breakpoint in pregnacy") +
+  xlab("High palatability breakpoint groups") + ylab("Estrodiol") +
+  theme_classic()
 ```
 
+
+```{r}
+ggplot(long_df, aes(x = low_bp, y = Estrodiol, color = Time)) +
+  geom_boxplot(size = .75) +
+  geom_jitter(alpha = .5) +
+  ggtitle("Estrogen vs. low palatability breakpoint in pregnacy") +
+  xlab("Low palatability breakpoint groups") + ylab("Estrodiol") +
+  theme_classic()
+```
+
+# Ordinal logistic regression
+Can't do normal regression with a factor as the outcome. Can't do binary logistic regression with more than two outcome variables. Need to use ordinal logistic regression.  https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/
+## Centering
+```{r}
+library(misty)
+long_df$Estrodiol_c<-center(long_df$Estrodiol, type = c("CGM"))
+long_df$Age_c<-center(long_df$AGE_Y, type = c("CGM"))
+long_df$BMICH_c<-center(long_df$MomA_BMICH, type = c("CGM"))
+summary(long_df$BMICH_c)
+summary(long_df$Estrodiol_c)
+summary(long_df$Age_c)
+```
+
+```{r}
+m0 <- polr(high_bp ~ 1+Estrodiol_c+Time, data = long_df, Hess=TRUE)
+summary(m0)
+
+## view a summary of the model
+summary(m0)
+(ctable0 <- coef(summary(m0)))
+## calculate and store p values
+p0 <- pnorm(abs(ctable0[, "t value"]), lower.tail = FALSE) * 2
+
+## combined table
+(ctable0 <- cbind(ctable0, "p value" = p0))
+
+(ci0 <- confint(m0)) # default method gives profiled CIs
+ci0.1<-confint.default(m0) # CIs assuming normality
+## odds ratios
+exp(coef(m0))
+## OR and CI
+exp(cbind(OR = coef(m0), ci0))
+vif(m0)
+```
+```{r}
+fm1 <- clmm2(high_bp ~ Estrodiol_c+Time, random=PATID, data=long_df)
+fm1
+
+fm2 <- clmm2(high_bp ~ Estrodiol_c*Time, random=PATID, data=long_df, Hess=TRUE, nAGQ=5)
+summary(fm2)
+```
+
+
+```{r}
+## Cumulative link model with one random term:
+fmm1 <- clmm(high_bp ~ Estrodiol_c+Time + (1|Time:Estrodiol_c), data = long_df)
+summary(fmm1)
+## Not run:
+## May take a couple of seconds to run this.
+## Cumulative link mixed model with two random terms:
+mm1 <- clmm(SURENESS ~ PROD + (1|RESP) + (1|RESP:PROD), data = soup,
+link = "probit", threshold = "equidistant")
+mm1
+summary(mm1)
+## test random effect:
+mm2 <- clmm(SURENESS ~ PROD + (1|RESP), data = soup,
+link = "probit", threshold = "equidistant")
+anova(mm1, mm2)
+## End(Not run)
+```
 
 ```{r}
 ## fit ordered logit model and store results 'm'
 long_df$high_bp<-as.factor(long_df$high_bp)
 long_df$high_bp <- factor(long_df$high_bp, levels = c("1", "2", "3", "4"))
 
-m <- polr(high_bp ~ MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = long_df, Hess=TRUE)
+m1 <- polr(high_bp ~ Estrodiol+Time+MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = long_df, Hess=TRUE)
 
 ## view a summary of the model
-summary(m)
-(ctable <- coef(summary(m)))
+summary(m1)
+(ctable1 <- coef(summary(m1)))
 ## calculate and store p values
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+p1 <- pnorm(abs(ctable1[, "t value"]), lower.tail = FALSE) * 2
 
 ## combined table
-(ctable <- cbind(ctable, "p value" = p))
+(ctable1 <- cbind(ctable1, "p value" = p1))
 
-(ci <- confint(m)) # default method gives profiled CIs
-confint.default(m) # CIs assuming normality
+(ci1 <- confint(m1)) # default method gives profiled CIs
+ci1.1<-confint.default(m1) # CIs assuming normality
 ## odds ratios
-exp(coef(m))
+exp(coef(m1))
 ## OR and CI
-exp(cbind(OR = coef(m), ci))
+exp(cbind(OR = coef(m1), ci1.1))
 ```
 ### Summary this is nice, but it is missing the random effects of time.... 
 The first step in a multilevel analysis such as this is to assess the need to do it in the first place. If there is not significant variation across contexts in the first place then doing a multilevel model is simply a perverse exercise in mental flagellation. If there is little evidence of variation across contexts then save yourself a lot of pain and just do a regression/ANOVA/ whatever variant of the general linear model that you feel like doing.
 Ascertaining whether there is variation over your contexts is fairly straightforward. First, we need to fit a baseline model in which we include only the intercept; next, we fit a model that allows intercepts to vary over contexts; finally we compare these two models to see whether the fit has improved as a result of allowing intercepts to vary. If it has, we jump on the runaway train to multilevel insanity; if it has not, we do a little dance of joy into the loving arms of a simpler life.
 ```{r}
 ## Cumulative link model with no random term:
-long_df_om<-na.omit(long_df)
-m <- polr(high_bp ~ MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP+Time, data = long_df_om, Hess=TRUE)
+m <- polr(high_bp ~ Time+MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = long_df_om, Hess=TRUE)
 ## view a summary of the model
 summary(m)
 
 summary(long_df$Time)
-long_df$Time<-as.factor(long_df$Time)
 
 fmm0 <- clmm(high_bp ~ MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP+Time, data = long_df_om, na.action = na.omit)
 summary(fmm0)
