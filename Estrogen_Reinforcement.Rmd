@@ -11,7 +11,12 @@ Effect of estrogen and dietary sugar intake on food reinforcement in pre and pos
 This is a secondary data analysis examining the relationship between dietary sugar intake, estrogen, and food reinforcement between pregnancy and the postpartum period. Estrogen has been related to a decrease in motivation for a sugar reward in animal models. Further estrogen has been shown to increase prediction errors in the nucleus accumbens. Together this suggests that estrogen is related to dopaminergic signaling and behaviorally this manifests as a reduction in the rewarding aspects of sugar. However, in the addiction literature, estrogen has been shown to increase motivation for illicit substances and alcohol. The differences between sugar and other rewards is not fully understood. During pregnancy, estrogen levels increases exponentially. This provides an interesting model to test the effect of estrogen on food reward and the effect of sugar intake. 
 
 # Hypotheses
-Aim1. To test the interactive effects of estrogen and added sugar intake on motivation for a reward, we will assess serum estrogen, percent added sugar intake from 2 diet recalls, and motivation (food reinforcement scale) from the PEAS dataset both in the pregnancy and postpartum period. We expect a significant interaction between added sugar intake and estrogen. Specifically we expect high dietary sugar intake will ablate the reward diminishing effect of estrogen during pregnancy (these women will show high pregnancy reward values, compared to low sugar intake). 
+Aim1. To test the interactive effects of estrogen and added sugar intake on motivation for a reward, we will assess: 
+* serum estrogen
+* percent added sugar intake from 2 diet recalls
+* motivation (food reinforcement scale) from the PEAS dataset both in the pregnancy and postpartum period. 
+
+We expect a significant interaction between added sugar intake and estrogen. Specifically we expect high dietary sugar intake will ablate the reward diminishing effect of estrogen during pregnancy (these women will show high pregnancy reward values, compared to low sugar intake). 
 
 # Design Plan
 ## Study type
@@ -25,6 +30,7 @@ No response
 ## Study design
 This study was completed in 2016. It was a longitudinal observational study of women in and around the Chapel Hill area from 12 wks pregnancy through 1yr postpartum. Details have been published here.
 Pregnancy eating attributes study (PEAS): a cohort study examining behavioral and environmental influences on diet and weight change in pregnancy and postpartum.
+
 Nansel TR, Lipsky LM, Siega-Riz AM, Burger K, Faith M, Liu A
 BMC Nutr. 2016 Jul 15; 2
 
@@ -48,6 +54,10 @@ library(plyr)
 library(emmeans)
 library(car)
 library(MASS)
+require(foreign)
+require(MASS)
+require(Hmisc)
+require(ordinal)
 ```
 
 ## Load data
@@ -124,6 +134,77 @@ df<-join(dint_df, cov_df)
 vars<-c("PATID", "Estradiol_1","Estradiol_2","FRH_BKPNT_1","FRH_OMAX_1", "FRH_PMAX_1","FRL_BKPNT_1","FRL_OMAX_1","FRL_PMAX_1", "FRH_BKPNT_2","FRH_OMAX_2","FRH_PMAX_2", "FRL_BKPNT_2","FRL_OMAX_2","FRL_PMAX_2", "KCAL", "sfat_kcal_post","sfat_pct_post","HEI2015C12_SFAT","addsug_kcal_post","addsug_pct_post","HEI2015C13_ADDSUG","sfat_as_kcal_post","sfat_as_pct_post","DEM_SNAP","MomA_BMI","BMI_0","AGE_Y","PARITY","DEM_ETHNICITY", "DEM_RACE","MomA_BMICH" )
 wide_df<-df[vars]
 ```
+## Make change scores
+```{r}
+# wide_df$E_change<-as.numeric(wide_df$Estradiol_2) - as.numeric(wide_df$Estradiol_1)
+wide_df$Estradiol_2<-as.numeric(wide_df$Estradiol_2)
+wide_df$Estradiol_1<-as.numeric(wide_df$Estradiol_1)
+
+hist(as.numeric(wide_df$Estradiol_2))
+hist(as.numeric(wide_df$Estradiol_1))
+
+wide_df$FRH_BKPNT_2<-as.numeric(wide_df$FRH_BKPNT_2)
+hist(wide_df$FRH_BKPNT_2)
+quantile(wide_df$low_bp_change, na.rm = T)
+
+wide_df$FRH_BKPNT_1<-as.numeric(wide_df$FRH_BKPNT_1)
+hist(wide_df$FRH_BKPNT_1)
+quantile(wide_df$low_bp_change, na.rm = T)
+
+wide_df$FRL_BKPNT_2<-as.numeric(wide_df$FRL_BKPNT_2)
+hist(wide_df$FRL_BKPNT_1)
+quantile(wide_df$low_bp_change, na.rm = T)
+
+wide_df$FRL_BKPNT_1<-as.numeric(wide_df$FRL_BKPNT_1)
+hist(wide_df$FRL_BKPNT_2)
+quantile(wide_df$low_bp_change, na.rm = T)
+
+wide_df$high_bp_change<-as.numeric(wide_df$FRH_BKPNT_2) - as.numeric(wide_df$FRH_BKPNT_1)
+wide_df$low_bp_change<-as.numeric(wide_df$FRL_BKPNT_2) - as.numeric(wide_df$FRL_BKPNT_1)
+hist(wide_df$low_bp_change)
+quantile(wide_df$low_bp_change, na.rm = T)
+
+wide_df$low_change[wide_df$low_bp_change<= -200]<-"1"
+wide_df$low_change[wide_df$low_bp_change> -200 & wide_df$low_bp_change<= -50]<-"2"
+wide_df$low_change[wide_df$low_bp_change> -50 & wide_df$low_bp_change<= 100]<-"3"
+wide_df$low_change[wide_df$low_bp_change> 100]<-"4"
+
+
+hist(wide_df$high_bp_change)
+quantile(wide_df$high_bp_change, na.rm = T)
+
+wide_df$high_change[wide_df$high_bp_change<= -200]<-"1"
+wide_df$high_change[wide_df$high_bp_change> -200 & wide_df$high_bp_change<= -100]<-"2"
+wide_df$high_change[wide_df$high_bp_change> -100 & wide_df$high_bp_change<= 100]<-"3"
+wide_df$high_change[wide_df$high_bp_change> 100]<-"4"
+
+summary(as.factor(wide_df$low_change))
+wide_df<-na.omit(wide_df)
+```
+
+```{r}
+names(wide_df)
+m0<-lm(high_change~1, data = wide_df)
+summary(m0)
+
+m1<-lm(high_change~MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = wide_df)
+summary(m1)
+lrtest(m0,m1) #no covariates predict the change very much
+
+m2<-lm(high_change~E_change+MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = wide_df)
+lrtest(m0,m2)
+summary(m2)
+```
+
+```{r}
+ggplot(subset(wide_df, wide_df$low_bp_change < 1000 & wide_df$low_bp_change > -1000), aes(x=E_change, y=HEI2015C13_ADDSUG)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm)   # Add linear regression line 
+                             #  (by default includes 95% confidence region)
+
+```
+
+
 
 ## Wide to long
 ```{r}
@@ -159,7 +240,7 @@ hist(long_df$HEI2015C12_SFAT)
 hist(sqrt(long_df$addsug_pct_post)) #this is good
 long_df$sqrtPerAddSug<-sqrt(long_df$addsug_pct_post)
 hist(subset(long_df$low_breakpoint, long_df$low_breakpoint < 5179.98/2))
-hist(long_df$high_breakpoint)
+hist(subset(long_df$high_breakpoint, long_df$high_breakpoint < 111000/20))
 hist(long_df$high_OMAX)
 hist(long_df$low_OMAX)
 hist(long_df$low_PMAX)
@@ -183,12 +264,12 @@ They reported taking psychiatric medications or medications related to steroid h
 Estradiol at 16-22 week pregnancy and 6 months postpartum 
 Dietary sugar intake at baseline, 16-22 week pregnancy, and 6 months postpartum
 Reinforcement measures (breakpoint and omax) change from baseline, 16-22 week pregnancy, and 6 months postpartum 
-FRH_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, BREAKPOINT <- use
+### FRH_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, BREAKPOINT <- use
 FRH_OMAX	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, O-MAX
 FRH_PCTCOMP	8	Food Reinforcement (Epstein) High Palatable, Percent Entered Fields
 FRH_PMAX	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, P-MAX PRODUCT
 FRH_PMAX_PRICE	8	FOOD REINFORCEMENT (EPSTEIN) HIGH PALATABLE, P-MAX PRICE
-FRL_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, BREAKPOINT <- use
+### FRL_BKPNT	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, BREAKPOINT <- use
 FRL_OMAX	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, O-MAX
 FRL_PCTCOMP	8	Food Reinforcement (Epstein) Low Palatable, Percent Entered Fields
 FRL_PMAX	8	FOOD REINFORCEMENT (EPSTEIN) LOW PALATABLE, P-MAX PRODUCT
@@ -207,26 +288,172 @@ MomA_BMICH
 #### Age
 AGE_Y
 # Analysis Plan
-## Statistical models
+We will use a general linear model to assess the interaction of added sugar intake and estradiol concentrations on reinforcement. We run a series of models to assess the effect of the independent variables of interest:
+1) baseline model (intercept only with covariates)
+
+## Statistical models - Baseline model
 ```{r}
 names(long_df)
 m0<-lme(high_breakpoint~1, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
 summary(m0)
 
-m1<-lme(high_breakpoint~sqrtBMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
+m1<-lme(high_breakpoint~MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, random = ~1|PATID/Estrodiol, data = long_df, method="REML", na.action=na.exclude)
 summary(m1)
 vif(m1)
 plot(m1)
 qqnorm(log(resid(m1))) # doesn't look great 
 hist(log(resid(m1))) # log seems to do the trick 
 
-bc <- boxcox(long_df$high_breakpoint~long_df$sqrtBMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
+bc <- boxcox(long_df$high_breakpoint~long_df$MomA_BMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
+bc
+```
+### box cox transform test
+```{r}
+(lambda <- bc$x[which.max(bc$y)])
+
+
+powerTransform <- function(y, lambda1, lambda2 = NULL, method = "boxcox") {
+
+  boxcoxTrans <- function(x, lam1, lam2 = NULL) {
+
+    # if we set lambda2 to zero, it becomes the one parameter transformation
+    lam2 <- ifelse(is.null(lam2), 0, lam2)
+
+    if (lam1 == 0L) {
+      log(y + lam2)
+    } else {
+      (((y + lam2)^lam1) - 1) / lam1
+    }
+  }
+
+  switch(method
+         , boxcox = boxcoxTrans(y, lambda1, lambda2)
+         , tukey = y^lambda1
+  )
+}
+
+
+# re-run with transformation
+m2 <- lm(powerTransform(long_df$high_breakpoint, lambda) ~ long_df$MomA_BMICH+long_df$DEM_RACE+long_df$DEM_ETHNICITY+long_df$AGE_Y+long_df$PARITY+long_df$DEM_SNAP)
+
+# QQ-plot
+qqnorm(m1$residuals); qqline(m1$residuals)
+qqnorm(m2$residuals); qqline(m2$residuals)
 ```
 
-We will use a general linear model to assess the interaction of added sugar intake and estradiol concentrations on reinforcement. We run a series of models to assess the effect of the independent variables of interest:
-1) baseline model (intercept only with covariates)
+### Too skewed need to try binning
+```{r}
+quantile(long_df$low_breakpoint, na.rm = T)
+
+long_df$low_bp[long_df$low_breakpoint<200]<-"1"
+long_df$low_bp[long_df$low_breakpoint>=200 & long_df$low_breakpoint<300]<-"2"
+long_df$low_bp[long_df$low_breakpoint>=300 & long_df$low_breakpoint<500]<-"3"
+long_df$low_bp[long_df$low_breakpoint>=500]<-"4"
+
+quantile(long_df$high_breakpoint, na.rm = T)
+
+long_df$high_bp[long_df$high_breakpoint<200]<-"1"
+long_df$high_bp[long_df$high_breakpoint>=200 & long_df$high_breakpoint<300]<-"2"
+long_df$high_bp[long_df$high_breakpoint>=300 & long_df$high_breakpoint<500]<-"3"
+long_df$high_bp[long_df$high_breakpoint>=500]<-"4"
+
+```
+
+# Ordinal regression
+Can't do normal regression with a factor as the outcome. Can't do binary logistic regression with more than two outcome variables. Need to use ordinal logistic regression.  https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/
+```{r}
+ggplot(long_df, aes(x = high_bp, y = Estrodiol)) +
+  geom_boxplot(size = .75) +
+  geom_jitter(alpha = .5) +
+  facet_grid(Time ~ ., margins = TRUE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+```{r}
+ggplot(subset(long_df, long_df$high_breakpoint < 1000), aes(x = high_breakpoint, y = Estrodiol)) +
+  geom_jitter(alpha = .5) +
+  geom_smooth(method='lm') +
+  facet_grid(Time ~ high_bp, margins = TRUE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+```{r}
+## fit ordered logit model and store results 'm'
+long_df$high_bp<-as.factor(long_df$high_bp)
+long_df$high_bp <- factor(long_df$high_bp, levels = c("1", "2", "3", "4"))
+
+m <- polr(high_bp ~ MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP, data = long_df, Hess=TRUE)
+
+## view a summary of the model
+summary(m)
+(ctable <- coef(summary(m)))
+## calculate and store p values
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+
+## combined table
+(ctable <- cbind(ctable, "p value" = p))
+
+(ci <- confint(m)) # default method gives profiled CIs
+confint.default(m) # CIs assuming normality
+## odds ratios
+exp(coef(m))
+## OR and CI
+exp(cbind(OR = coef(m), ci))
+```
+### Summary this is nice, but it is missing the random effects of time.... 
+The first step in a multilevel analysis such as this is to assess the need to do it in the first place. If there is not significant variation across contexts in the first place then doing a multilevel model is simply a perverse exercise in mental flagellation. If there is little evidence of variation across contexts then save yourself a lot of pain and just do a regression/ANOVA/ whatever variant of the general linear model that you feel like doing.
+Ascertaining whether there is variation over your contexts is fairly straightforward. First, we need to fit a baseline model in which we include only the intercept; next, we fit a model that allows intercepts to vary over contexts; finally we compare these two models to see whether the fit has improved as a result of allowing intercepts to vary. If it has, we jump on the runaway train to multilevel insanity; if it has not, we do a little dance of joy into the loving arms of a simpler life.
+```{r}
+## Cumulative link model with no random term:
+long_df_om<-na.omit(long_df)
+m <- polr(high_bp ~ MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP+Time, data = long_df_om, Hess=TRUE)
+## view a summary of the model
+summary(m)
+
+summary(long_df$Time)
+long_df$Time<-as.factor(long_df$Time)
+
+fmm0 <- clmm(high_bp ~ MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP+Time, data = long_df_om, na.action = na.omit)
+summary(fmm0)
+lrtest(m, fmm0)
+# Looks like the random term doesn't make a difference
+```
 
 2) interaction model (interaction term with covariates)
+```{r}
+m1 <- polr(high_bp ~ Estrodiol+MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP+Time, data = long_df_om, Hess=TRUE)
+## view a summary of the model
+summary(m1)
+(ctable1 <- coef(summary(m1)))
+## calculate and store p values
+p1 <- pnorm(abs(ctable1[, "t value"]), lower.tail = FALSE) * 2
+
+## combined table
+(ctable1 <- cbind(ctable1, "p value" = p1))
+
+ci1<-confint.default(m1) # CIs assuming normality
+## odds ratios
+exp(coef(m1))
+## OR and CI
+exp(cbind(OR = coef(m1), ci1))
+
+fmm1 <- clmm(high_bp ~ Estrodiol+MomA_BMICH+DEM_RACE+DEM_ETHNICITY+AGE_Y+PARITY+DEM_SNAP+Time+(1|PATID), data = long_df_om, na.action = na.omit)
+summary(fmm1)
+# PATID doesn't improve the model
+lrtest(m1, fmm1)
+```
+
+
+```{r}
+library(repolr)
+long_df_om$high_bp<-as.numeric(as.character(long_df_om$high_bp))
+long_df_om$Estrodiol<-as.numeric(long_df_om$Estrodiol)
+
+mod.0 <- repolr(high_bp ~ Estrodiol+Time, data=long_df, categories=4, subjects="PATID", times=c(1,2), corr.mod="uniform", alpha=0.5)
+summary(mod.0)
+summary(update(mod.0, diffmeth = "numeric"))
+summary(update(mod.0, fixed = TRUE, alpha =0.5))
+```
 
 We will assess differences between the two models using an anova. 
 Estradiol and added sugar intake will be random intercepts.
